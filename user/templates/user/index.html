@@ -12,9 +12,8 @@
 <meta name="language" content="English">
 
 <title>{{title}}</title>
-
 <!-- bootstrap file -->
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 <!-- bootstrap file-->
@@ -37,6 +36,7 @@
 <script>
 	alert("{{ message }}");
 </script>
+{{message}}
 
 {% endfor %}
 {% endif %}
@@ -44,80 +44,116 @@
 
 </head>
 {% block content %}
-<body class="container-fluid">
+<body>
 
 {% include "user/base.html" %}
+<div class="container-fluid">
 <div class="row">
 	{% block start %}
 	{% if user.is_authenticated %}
-	<div class="container">
-		<center><h1>Welcome back {{user.first_name}}!</h1></center>
+		<div class="container">
+			<center><h3>Welcome back {{user.first_name}}!</h3></center>
 		{% else %}
-		<center><h1>Check Out</h1></center>
+			<center><h3>Check Out</h3></center>
 		{% endif %}
-		<div>
-			<center><button type="button" class="btn btn-info"><a href="{% url "libraries:library-list"%}">View Libraries</a></button></center>
+			</br>
+		</div>
+</div>
+</div>
+		<div class="container d-flex justify-content-md-center">
+				<form id="searchForm" class="row" action="{% url 'libraries:library-list' %}">
+					{% csrf_token%}
+					<div class="col-md-11">
+						<input class="form-control" id="searchInput" class="form-control" type="search" placeholder="Search or view all libraries" aria-label="Search" name="search" value="{{ search_value }}">
+					</div>	
+					<div class="col-md-1">
+						<button class="btn btn-primary" type="submit">Search</button>
+					</div>	
+				</form>
 		</div>
 		</br>
-	</div>
 	{% endblock %}
+	<div class="container-fluid">
+	<div class="row">
 	{% if user.is_authenticated and isfrontpage %}
 	{% block subscriptions %}
 		<div class="container">
 			<div class="row">
-				<div class="col-4">
+				<div class='col-2'></div>
+				<div class="col-8">
+					{% if messages %}
+					{% for message in messages %}
+						<div class="alert alert-info" role="alert">
+						  {{message}}
+						</div>
+					{% endfor %}
+					{% endif %}
+
 					{% if subscriptions %}
-						<center><h2>Your Subscriptions</h2></center>
+						<center><h4>Your Subscriptions</h4></center>
 					{% else %}
 						<center>Looks like your not subscribed to any book clubs.</center>
 					{% endif %}
 					{% for club in subscriptions %}
-						<div class="panel panel-default">
-							<div class="row">
-								<div class="panel-heading">
-									<div class="col-sm-8">
-										{% if club.admin == request.user %}
-											<p class="text-primary">OWNER</p>
-										{% else %}
-											<p class="text-primary">MEMBER</p>
-										{% endif %}
-										 Club Name: {{club.name}} - Meeting Day: {{club.meetingDay}} - Current Boook: {{club.currentBook}}
-									</div>
-									<div class="col-sm-4">
-										<div style="float: right;">
+						<div class='card' style="width: 100%;margin-bottom:10px;">
+							<div class="card-body">
+								<div class="card-title">
+									<div class='row'>
+										<div class='col-6'>
 											{% if club.admin == request.user %}
-												<a href="{% url 'edit_book_club' club.id %}" class="btn btn-primary">Edit Book Club</a>
+												<p style="font-size:16px"><span class="text-primary">OWNER</span> | <a href="{% url 'details' club.id %}"> <b>{{club.name}}</b></a></p>
 											{% else %}
-												<form method="POST" action="{% url 'users:unsubscribe' club.id %}">
-													{% csrf_token %}
-													<button type="submit" class="btn btn-warning">Unsubscribe</button>
-												</form>
+												<p style="font-size:16px"><span class="text-primary">MEMBER</span> | <a href="{% url 'details' club.id %}"><b>{{club.name}}</b></a></p>
 											{% endif %}
+											
+										</div>
+										<div class='col-6' style='float: right;'>
+											<div style='float:right'>
+												{% if club.admin == request.user %}
+													<div style='float:left;margin:2px'>
+													<a href="{% url 'edit_book_club' club.id %}" class="btn btn-primary" style="font-size:14px">Edit</a>
+													</div>
+												{% endif %}
+												<form style='float:left;margin:2px' method="POST" action="{% url 'users:unsubscribe' club.id %}">
+													{% csrf_token %}
+													<button type="submit" class="btn btn-warning" style="font-size:14px">Unsubscribe</button>
+												</form>
+												{% if request.user in club.silenceNotification.all %}
+													<form style='float:left;margin:2px' method="POST" action="{% url 'users:mute' club.id %}">
+														{% csrf_token %}
+														<button type="submit" name="unmute" class="btn btn-secondary" style="font-size:14px">Unmute</button>
+													</form>
+												{% else %}
+													<form style='float:left;margin:2px' method="POST" action="{% url 'users:mute' club.id %}">
+														{% csrf_token %}
+														<button type="submit" name="mute" class="btn btn-secondary" style="font-size:14px">Mute</button>
+													</form>
+												{% endif %}
+											</div>
+											
 										</div>
 									</div>
 								</div>
-							</div>
-							<div class="panel-body">
-								{{club.description}}
+								<div class="card-text">
+									<b style="font-size:16px">{{club.libraryId.branch}}</b><br>
+									Meeting Day: {{club.meetingDay}}<br>
+									Current Book: {{club.currentBook}}<br>
+									Description: {{club.description}}
+								</div>
 							</div>
 						</div>
 					{% endfor %}
 				</div>
+				<div class='col-2'></div>
 			</div>
 		</div>
 	{% endblock %}
 	{% endif %}
 	{% if not user.is_authenticated and isfrontpage %}
-		<div class="container">
-			<div class=".col-md-3">
-				<div class="panel panel-info">
-					<div class="panel-heading">
-							Login for to view subscriptions
-					</div>
-				</div>
-			</div>
-		</div>
+		<center>Login for to view subscriptions</center>
 	{% endif %}
+</div>
+</div>
 </div>
 </body>
 {% endblock %}

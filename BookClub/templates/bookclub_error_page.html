@@ -1,0 +1,19 @@
+{% extends "user/base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card text-center">
+                <div class="card-header">
+                    <h1>Book Club Deletion</h1>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">The book club has been successfully deleted.</p>
+                    <a href="{% url 'home' %}" class="btn btn-primary">Return to Home</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

@@ -3,14 +3,14 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
-from django.contrib.auth.views import PasswordChangeView
+from django.contrib.auth.views import PasswordChangeView, PasswordResetView
 from django.contrib.messages.views import SuccessMessageMixin
 from .forms import UserRegisterForm, ValidateForm, UpdateUserForm
 from django.core.mail import send_mail
 from django.urls import reverse_lazy
 from smtplib import SMTPException
 from django.core.exceptions import ObjectDoesNotExist
-from BookClub.models import BookClub
+from BookClub.models import BookClub, VotingPoll
 import time
 import random
 import string
@@ -30,8 +30,30 @@ def index(request):
     )
 
 
+def mute(request, slug):
+    if request.user:
+        bc = BookClub.objects.get(id=slug)
+        if request.method == "POST":
+            if "mute" in request.POST:
+                bc.silenceNotification.add(request.user)
+                messages.info(
+                    request,
+                    "Notifications Muted. "
+                    + "You will no longer recieve notifications from this book club.",
+                )
+            elif "unmute" in request.POST:
+                bc.silenceNotification.remove(request.user)
+                messages.info(
+                    request,
+                    "Notification Unmuted. You will now recieve notifications.",
+                )
+    else:
+        messages.info(request, "You should not have been there")
+    return redirect("users:index")
+
+
 def unsubscribe(request, slug):
-    print("unsubscribing")
+    # print("unsubscribing")
     if request.method == "POST":
         try:
             bc = BookClub.objects.get(id=slug)
@@ -41,6 +63,9 @@ def unsubscribe(request, slug):
                     "Owner can not unsubscribe, please reassign ownership first",
                 )
                 return redirect("users:index")
+            if bc.polls != 0:
+                poll = VotingPoll.objects.get(id=bc.polls)
+                poll.remove_user_from_poll(request.user)
             bc.members.remove(request.user)
             messages.info(request, "Unsubscribe action complete")
         except ObjectDoesNotExist:
@@ -56,7 +81,7 @@ def register(request):
             if form.is_valid():
                 vcode = "".join(random.choices(string.ascii_letters, k=5))
                 email = form.cleaned_data.get("email")
-                print(f"vcode: {vcode}")
+                # print(f"vcode: {vcode}")
                 request.session["verification_code"] = {
                     "code": vcode,
                     "ttl": (time.time() + 300),
@@ -90,9 +115,9 @@ def register(request):
                     }
                     return render(request, "user/register.html", context)
         elif "verify" in request.POST:
-            print("Verify stuff")
+            # print("Verify stuff")
             validate_form = ValidateForm(request.POST)
-            print(request.POST)
+            # print(request.POST)
             if validate_form.is_valid():
                 code = validate_form.cleaned_data.get("code")
                 validation_token = request.session.get("verification_code")
@@ -162,11 +187,11 @@ def user_login(request):
 def user_profile(request):
     if request.method == "POST":
         user_form = UpdateUserForm(request.POST, instance=request.user)
-        print("this one", request.POST)
+        # print("this one", request.POST)
         # if "change_password" in re
         if "update" in request.POST:
             if request.POST["email"] == request.user.email:
-                print("no email update")
+                # print("no email update")
                 if user_form.is_valid():
                     user_form.save()
                     messages.success(request, "Your profile is updated successfully")
@@ -175,11 +200,11 @@ def user_profile(request):
             # email changed
             request.session["profile_form"] = request.POST
             if request.POST["email"] != request.user.email:
-                print("email changed")
+                # print("email changed")
                 if user_form.is_valid():
                     vcode = "".join(random.choices(string.ascii_letters, k=5))
                     email = user_form.cleaned_data.get("email")
-                    print(f"vcode: {vcode}")
+                    # print(f"vcode: {vcode}")
                     request.session["verification_code"] = {
                         "code": vcode,
                         "ttl": (time.time() + 300),
@@ -246,7 +271,14 @@ make sure you entered in the right code.",
                     }
                     return render(request, "user/profile.html", context)
             else:
+                context = {
+                    "title": "validate code",
+                    "verify_code": True,
+                    "validate_failed": True,
+                    "error_text": "Please enter a valid code!",
+                }
                 print("Failed validation")
+                return render(request, "user/profile.html", context)
     else:
         user_form = UpdateUserForm(instance=request.user)
     return render(
@@ -260,3 +292,16 @@ class ChangePasswordView(SuccessMessageMixin, PasswordChangeView):
     template_name = "user/change_password.html"
     success_message = "Successfully Changed Your Password"
     success_url = reverse_lazy("users:index")
+
+
+class ResetPasswordView(SuccessMessageMixin, PasswordResetView):
+    template_name = "user/reset_password.html"
+    email_template_name = "user/password_reset_email.html"
+    subject_template_name = "user/password_reset_subject.txt"
+    success_message = (
+        "Instructions on how to reset your password were sent to you email. "
+        "If you have an existing account with us, you should receive the email shortly. "
+        "Make sure you have entered the correct email address and check your spam folder "
+        "if you didn't receive an email."
+    )
+    success_url = reverse_lazy("users:password-reset")

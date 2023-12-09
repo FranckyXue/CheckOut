@@ -37,12 +37,32 @@ ALLOWED_HOSTS = [
     "172.31.40.50",
 ]
 
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "WARNING",
+    },
+}
+
 
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
     "user.apps.UserConfig",
     "libraries.apps.LibrariesConfig",
+    "BookClub.apps.BookClubConfig",
+    "Notifications.apps.NotificationsConfig",
+    "books.apps.BooksConfig",
+    "chat.apps.ChatConfig",
+    "channels",
     "crispy_forms",
     "crispy_bootstrap4",
     "django.contrib.admin",
@@ -53,7 +73,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "bootstrap5",
     "django_bootstrap_icons",
-    "BookClub.apps.BookClubConfig",
 ]
 
 AUTH_USER_MODEL = "user.CustomUser"
@@ -96,7 +115,9 @@ MESSAGE_TAGS = {
     messages.ERROR: "alert-danger",
 }
 
+
 WSGI_APPLICATION = "CheckOut.wsgi.application"
+ASGI_APPLICATION = "CheckOut.asgi.application"
 
 
 # Database
@@ -160,6 +181,18 @@ STATIC_ROOT = "static"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CRISPY_TEMPLATE_PACK = "bootstrap4"
+
+GOOGLE_API_KEY = env("GOOGLE_API_KEY")
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+        # "CONFIG": {"hosts": [("red-5cdtdk.serverless.usw2.cache.amazonaws.com", 6379)]},
+    }
+}
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"

@@ -11,6 +11,8 @@ from django.views.generic.list import ListView
 from django.db.models import Q
 from libraries.models import Library
 from BookClub.models import BookClub
+from BookClub.views import checkIfAllowedToSubscribe
+from django.conf import settings as conf_settings
 from django.core.exceptions import ObjectDoesNotExist
 
 from .forms import JoinClubForm
@@ -35,6 +37,7 @@ class LibraryDetailView(DetailView):
         bc_pk_list = [bc.bookclub_id for bc in bookclubs_ids]
         context["user_clubs"] = BookClub.objects.filter(pk__in=bc_pk_list)
         context["form"] = JoinClubForm()
+        context["key"] = conf_settings.GOOGLE_API_KEY
 
         return context
 
@@ -46,7 +49,6 @@ class JoinClubFormView(SingleObjectMixin, FormView):
     success_url = "#"
 
     def post(self, request, *args, **kwargs):
-        print("pray")
         self.object = self.get_object()
         return super().post(request, *args, **kwargs)
 
@@ -72,7 +74,7 @@ class LibraryView(View):
                 )
             else:
                 try:
-                    bc = BookClub.objects.get(id=request.POST["bookclub_id"][0])
+                    bc = BookClub.objects.get(id=request.POST["bookclub_id"])
                     if "unjoin" in request.POST:
                         if bc.admin == request.user:
                             messages.error(
@@ -82,7 +84,7 @@ class LibraryView(View):
                         else:
                             bc.members.remove(request.user)
                     else:
-                        bc.members.add(request.user)
+                        checkIfAllowedToSubscribe(bc, request)
                 except ObjectDoesNotExist:
                     messages.error(
                         request,
