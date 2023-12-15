@@ -1,0 +1,46 @@
+
+{% block content %}
+<table>
+    <thead>
+        <tr>
+            <th>BRANCH</th>
+            <th>POSTCODE</th>
+            <th>PHONE</th>
+            <th>ACTIONS</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for library in page_obj %}
+        <tr>
+            <td>{{ library.BRANCH }}</td>
+            <td>{{ library.POSTCODE }}</td>
+            <td>{{ library.PHONE }}</td>
+            <td>
+                <a href="{% url 'libraries:library_detail' library_id=library.ID %}">Detail</a>
+                <!-- subscribe按钮可以根据你的实际需求进行修改 -->
+                <a href="#">Subscribe</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- 分页链接 -->
+<div class="pagination">
+    <span class="step-links">
+        {% if page_obj.has_previous %}
+            <a href="?page=1">&laquo; first</a>
+            <a href="?page={{ page_obj.previous_page_number }}">previous</a>
+        {% endif %}
+
+        <span class="current">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+        </span>
+
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}">next</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
+        {% endif %}
+    </span>
+</div>
+{% endblock %}
